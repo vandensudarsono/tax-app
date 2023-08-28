@@ -1,0 +1,148 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<p>Hi!, Good day for you!</p>
+<p> Let's work!</p>
+
+<div class="container">
+  <div class="mb-2">
+    <div class="row">
+      <div class="col-4">
+        <label for="exampleDataList" class="form-label">Datalist product</label>
+        <input class="form-control" list="datalistOptions" id="exampleDataList" placeholder="Type product..">
+        <datalist id="datalistOptions">
+          {% for good in goods %}
+            <option value="{{good}}"> {{good}} </option>
+          {% endfor %}
+        </datalist>
+      </div>
+      <div class="col-2">
+        <label for="price" class="form-label">Price</label>
+        <input class="form-control" id="price" type="number" placeholder="$">
+      </div>
+      <div class="col-2">
+        <label for="qty" class="form-label">Quantity</label>
+        <input class="form-control" id="qty" type="number" placeholder="qty">
+      </div>
+      <div class="col-2 d-flex justify-content-center">
+        <div class="col-sm-10">
+          <label class="form-label"> Imported </label>
+          <input class="form-check-input" type="checkbox" value="" id="flexCheckDefault">
+          <label class="form-check-label" for="flexCheckDefault">
+            Yes
+          </label>
+        </div>
+      </div>
+      <div class="col-2" id="add-list">
+        <label for="add-list" class="form-label">Add to list</label>
+        <button type="submit" class="btn btn-primary mb-3" id="add-list">Add</button>
+      </div>
+  </div>
+  <div class="mb-2">
+    <label for="static-goods" class="col-sm-2 col-form-label">List of goods:</label>
+    <div class="col-sm-10">
+        <div id="static-adds"></div> <!-- Use a div to display the content -->
+    </div>
+  </div>
+  <div class="mb-2">
+    <button type="button" class="btn btn-primary btn-sm" id="proceed-button">Proceed</button>
+    <button type="button" class="btn btn-secondary btn-sm" id="cancel-button">Cancel</button>
+  </div>
+</div>
+<!-- HTML to display the receipt -->
+<div id="receipt" class="receipt mb2">
+  <!-- Receipt content will be added here -->
+</div>
+
+<script>
+  document.addEventListener("DOMContentLoaded", function() {
+      var addButton = document.getElementById("add-list");
+      var staticAdds = document.getElementById("static-adds");
+      var proceedButton = document.getElementById("proceed-button");
+      var accumulatedItems =[];
+  
+      addButton.addEventListener("click", function() {
+          var inputElement = document.getElementById("exampleDataList");
+          var newItemValue = inputElement.value.trim();
+
+          var inputElementPrice = document.getElementById("price")
+          var priceValue = parseFloat(inputElementPrice.value);
+
+          var inputElementQty = document.getElementById("qty");
+          var qtyValue = parseInt(inputElementQty.value);
+          
+          if (newItemValue !== "") {
+              var newItem = document.createElement("div");
+              newItem.classList.add("form-control");
+              console.log("newItemValue: ", newItemValue, priceValue, qtyValue)
+             
+              newItem.textContent = newItemValue+" "+priceValue+" "+qtyValue;
+              staticAdds.appendChild(newItem);
+              accumulatedItems.push({
+                "name": newItemValue,
+                "qty": qtyValue,
+                "price": priceValue,
+              });
+
+              console.log(accumulatedItems)
+              inputElement.value = ""; // Clear the input after adding
+              inputElementPrice.value = "";
+              inputElementQty.value = "";
+          }
+      });
+  
+      proceedButton.addEventListener("click", function() {
+          // Here you can use accumulatedItems array for further processing
+          // For example, send it to the server via form submission or AJAX
+          console.log(accumulatedItems);
+          console.log(JSON.stringify(accumulatedItems))
+          
+          if (accumulatedItems.length > 0) {
+            // Send accumulatedItems to the server using Fetch API
+            fetch('/buy', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                  "data": accumulatedItems
+                }),
+            })
+            .then(response => response.json())
+            .then(data => {
+                console.log('Server response:', data);
+                // Handle server response here
+                // Extract values from the JSON response
+                const items = data.data.map(item => `<p>${item.qty} ${item.name}: $${item.price.toFixed(2)}</p>`).join('');
+                const tax = data.tax;
+                const total = data.total;
+
+                // Create receipt content
+                const receiptContent = `
+                    <h2>Receipt</h2>
+                    <div class="receipt-items">${items}</div>
+                    <p>Tax: $${tax.toFixed(2)}</p>
+                    <p>Total: $${total.toFixed(2)}</p>`;
+
+                // Display the receipt on the page
+                const receiptDiv = document.getElementById("receipt");
+                receiptDiv.innerHTML = receiptContent;
+
+                accumulatedItems = []
+                staticAdds.innerHTML = ""
+
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                // Handle error here
+            });
+        }
+      });
+      
+  });
+
+  
+  </script>
+  
+
+{% endblock content %}
